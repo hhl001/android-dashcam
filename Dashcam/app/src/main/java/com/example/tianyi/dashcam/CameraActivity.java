@@ -11,6 +11,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.view.View;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +28,8 @@ public class CameraActivity extends Activity {
     private CameraPreview mPreview;
     private MediaRecorder mMediaRecorder;
     private Boolean isRecording = false;
+    // GPSTracker class
+    private GPSTracker gps;
 
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
@@ -49,6 +52,23 @@ public class CameraActivity extends Activity {
         captureButton.setOnClickListener(new View.OnClickListener() {
                                              @Override
                                              public void onClick(View v) {
+                                                 gps = new GPSTracker(CameraActivity.this);
+
+                                                 // check if GPS enabled
+                                                 if(gps.canGetLocation()){
+
+                                                     double latitude = gps.getLatitude();
+                                                     double longitude = gps.getLongitude();
+
+                                                     // \n is for new line
+                                                     Toast.makeText(getApplicationContext(), "Your Location is - \nLat: " + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+                                                 }else{
+                                                     // can't get location
+                                                     // GPS or Network is not enabled
+                                                     // Ask user to enable GPS/network in settings
+                                                     gps.showSettingsAlert();
+                                                 }
+
                                                  if (isRecording) {
                                                      // stop recording and release camera
                                                      mMediaRecorder.stop();  // stop the recording
