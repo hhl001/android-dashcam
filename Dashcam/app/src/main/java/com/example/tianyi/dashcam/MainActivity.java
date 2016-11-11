@@ -1,6 +1,9 @@
 package com.example.tianyi.dashcam;
 
+import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -23,7 +26,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openCamera(View view) {
-        Intent intent = new Intent(this, CameraActivity.class);
-        startActivity(intent);
+        if (this.checkSelfPermission( android.Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED ) {
+            ActivityCompat.requestPermissions((Activity) this, new String[] {  android.Manifest.permission.ACCESS_FINE_LOCATION  },
+                    12 );
+        } else {
+            Intent intent = new Intent(this, CameraActivity.class);
+            startActivity(intent);
+        }
     }
 }
