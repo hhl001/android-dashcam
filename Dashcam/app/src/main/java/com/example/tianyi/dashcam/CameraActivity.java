@@ -48,7 +48,8 @@ public class CameraActivity extends Activity {
         preview.addView(mPreview);
 
         // Add a listener to the Capture button
-        Button captureButton = (Button) findViewById(R.id.button_capture);
+        final Button captureButton = (Button) findViewById(R.id.button_capture);
+        captureButton.setText("Record");
         captureButton.setOnClickListener(new View.OnClickListener() {
                                              @Override
                                              public void onClick(View v) {
@@ -77,13 +78,18 @@ public class CameraActivity extends Activity {
 
                                                      // inform the user that recording has stopped
                                                      //setCaptureButtonText("Capture");
+                                                     gps.stopUsingGPS();
+                                                     captureButton.setText("Record");
                                                      isRecording = false;
                                                  } else {
+
                                                      // initialize video camera
                                                      if (prepareVideoRecorder()) {
                                                          // Camera is available and unlocked, MediaRecorder is prepared,
                                                          // now you can start recording
                                                          mMediaRecorder.start();
+                                                         captureButton.setText("Stop");
+
 
                                                          // inform the user that recording has started
                                                          //setCaptureButtonText("Stop");
