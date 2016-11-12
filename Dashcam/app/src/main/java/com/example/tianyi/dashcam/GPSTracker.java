@@ -22,6 +22,11 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 public class GPSTracker extends Service implements LocationListener {
 
     private final Context mContext;
@@ -38,6 +43,11 @@ public class GPSTracker extends Service implements LocationListener {
     Location location; // location
     double latitude; // latitude
     double longitude; // longitude
+    double speed; //speed
+    String date; //date
+    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+
+    List<LocationPoint> locationList = new ArrayList<>();
 
     // The minimum distance to change Updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 100; // 100 meters
@@ -85,6 +95,11 @@ public class GPSTracker extends Service implements LocationListener {
                         if (location != null) {
                             latitude = location.getLatitude();
                             longitude = location.getLongitude();
+                            speed = location.getSpeed();
+                            Date nowdate = new Date();
+                            date = sdfDate.format(nowdate);
+                            LocationPoint lp1 = new LocationPoint(latitude, longitude, speed, date);
+                            locationList.add(lp1);
                         }
                     }
                 }
@@ -102,6 +117,11 @@ public class GPSTracker extends Service implements LocationListener {
                             if (location != null) {
                                 latitude = location.getLatitude();
                                 longitude = location.getLongitude();
+                                speed = location.getSpeed();
+                                Date nowdate = new Date();
+                                date = sdfDate.format(nowdate);
+                                LocationPoint lp1 = new LocationPoint(latitude, longitude, speed, date);
+                                locationList.add(lp1);
                             }
                         }
                     }
