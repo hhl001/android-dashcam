@@ -22,6 +22,10 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,6 +34,7 @@ import java.util.List;
 public class GPSTracker extends Service implements LocationListener {
 
     private final Context mContext;
+    private OutputStreamWriter out;
 
     // flag for GPS status
     boolean isGPSEnabled = false;
@@ -58,9 +63,25 @@ public class GPSTracker extends Service implements LocationListener {
     // Declaring a Location Manager
     protected LocationManager locationManager;
 
-    public GPSTracker(Context context) {
+    public GPSTracker(Context context) throws IOException {
         this.mContext = context;
-        // Open file.
+        // Open file
+        File[] fs = context.getExternalFilesDirs(null);
+        String extPath = "";
+        // at index 0 you have the internal storage and at index 1 the real external...
+        if (fs != null && fs.length >= 2){
+            extPath = fs[1].getAbsolutePath();
+            Log.e("SD Path",fs[1].getAbsolutePath());
+        }
+
+        String filename = "LocationData.txt";
+        File outputFile = new File(extPath, filename);
+        if (!outputFile.exists())
+            outputFile.createNewFile();
+
+        out = new OutputStreamWriter(new FileOutputStream(outputFile));
+        out.write("Timespam, Latitude, Longitude, Speed");
+        out.write("\n");
         getLocation();
     }
 
@@ -139,8 +160,16 @@ public class GPSTracker extends Service implements LocationListener {
      * Stop using GPS listener
      * Calling this function will stop using GPS in your app
      * */
-    public void stopUsingGPS(){
+    public void stopUsingGPS() throws IOException {
+
         // write/flush to file and close.
+        for (int i=0; i<locationList.size(); i++){
+            out.write(locationList.get(i).output());
+            out.write("\n");
+        }
+
+        out.close();
+
         if(locationManager != null){
             locationManager.removeUpdates(GPSTracker.this);
         }

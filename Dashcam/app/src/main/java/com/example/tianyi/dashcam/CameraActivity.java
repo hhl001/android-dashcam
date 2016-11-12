@@ -53,7 +53,11 @@ public class CameraActivity extends Activity {
         captureButton.setOnClickListener(new View.OnClickListener() {
                                              @Override
                                              public void onClick(View v) {
-                                                 gps = new GPSTracker(CameraActivity.this);
+                                                 try {
+                                                     gps = new GPSTracker(CameraActivity.this);
+                                                 } catch (IOException e) {
+                                                     e.printStackTrace();
+                                                 }
 
                                                  // check if GPS enabled
                                                  if (gps.canGetLocation()) {
@@ -78,7 +82,11 @@ public class CameraActivity extends Activity {
 
                                                      // inform the user that recording has stopped
                                                      //setCaptureButtonText("Capture");
-                                                     gps.stopUsingGPS();
+                                                     try {
+                                                         gps.stopUsingGPS();
+                                                     } catch (IOException e) {
+                                                         e.printStackTrace();
+                                                     }
                                                      captureButton.setText("Record");
                                                      isRecording = false;
                                                  } else {
