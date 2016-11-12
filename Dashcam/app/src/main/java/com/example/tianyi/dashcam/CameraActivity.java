@@ -11,7 +11,6 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.view.View;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,28 +18,23 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import static android.content.ContentValues.TAG;
-import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
-import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
 public class CameraActivity extends Activity {
 
     private Camera mCamera;
     private CameraPreview mPreview;
     private MediaRecorder mMediaRecorder;
-    private Boolean isRecording = false;
-    // GPSTracker class
-    private GPSTracker gps;
-
-    public static final int MEDIA_TYPE_IMAGE = 1;
-    public static final int MEDIA_TYPE_VIDEO = 2;
+    private Boolean mIsRecording = false;
+    private GPSTracker mGPSTracker;
+    private Session mSession;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
-        // Create an instance of Camera
         mCamera = getCameraInstance();
+        mGPSTracker = new GPSTracker(CameraActivity.this);
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
@@ -51,77 +45,54 @@ public class CameraActivity extends Activity {
         final Button captureButton = (Button) findViewById(R.id.button_capture);
         captureButton.setText("Record");
         captureButton.setOnClickListener(new View.OnClickListener() {
-                                             @Override
-                                             public void onClick(View v) {
-                                                 try {
-                                                     gps = new GPSTracker(CameraActivity.this);
-                                                 } catch (IOException e) {
-                                                     e.printStackTrace();
-                                                 }
+            @Override
+            public void onClick(View v) {
+                // check if GPS enabled
+                if (!mGPSTracker.canGetLocation()) {
+                    mGPSTracker.showSettingsAlert();
+                }
 
-                                                 // check if GPS enabled
-                                                 if (gps.canGetLocation()) {
+                if (mIsRecording) {
+                    // stop recording and release camera
+                    mMediaRecorder.stop();  // stop the recording
+                    releaseMediaRecorder(); // release the MediaRecorder object
+                    mCamera.lock();         // take camera access back from MediaRecorder
 
-                                                     double latitude = gps.getLatitude();
-                                                     double longitude = gps.getLongitude();
+                    mGPSTracker.stop();
+                    mSession.flushLocationData();
 
-                                                     // \n is for new line
-                                                     Toast.makeText(getApplicationContext(), "Your Location is - \nLat: " + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
-                                                 }else {
-                                                     // can't get location
-                                                     // GPS or Network is not enabled
-                                                     // Ask user to enable GPS/network in settings
-                                                     gps.showSettingsAlert();
-                                                 }
+                    captureButton.setText("Record");
+                    mIsRecording = false;
+                } else {
+                    mSession = new Session();
+                    mGPSTracker.setSession(mSession);
 
-                                                 if (isRecording) {
-                                                     // stop recording and release camera
-                                                     mMediaRecorder.stop();  // stop the recording
-                                                     releaseMediaRecorder(); // release the MediaRecorder object
-                                                     mCamera.lock();         // take camera access back from MediaRecorder
+                    // initialize video camera
+                    if (prepareVideoRecorder()) {
+                        // Camera is available and unlocked, MediaRecorder is prepared,
+                        // now you can start recording
 
-                                                     // inform the user that recording has stopped
-                                                     //setCaptureButtonText("Capture");
-                                                     try {
-                                                         gps.stopUsingGPS();
-                                                     } catch (IOException e) {
-                                                         e.printStackTrace();
-                                                     }
-                                                     captureButton.setText("Record");
-                                                     isRecording = false;
-                                                 } else {
+                        mMediaRecorder.start();
+                        captureButton.setText("Stop");
 
-                                                     // initialize video camera
-                                                     if (prepareVideoRecorder()) {
-                                                         // Camera is available and unlocked, MediaRecorder is prepared,
-                                                         // now you can start recording
-                                                         mMediaRecorder.start();
-                                                         captureButton.setText("Stop");
-
-
-                                                         // inform the user that recording has started
-                                                         //setCaptureButtonText("Stop");
-                                                         isRecording = true;
-                                                     } else {
-                                                         // prepare didn't work, release the camera
-                                                         releaseMediaRecorder();
-                                                         // inform user
-                                                     }
-                                                 }
-                                             }
-                                         }
-        );
+                        mIsRecording = true;
+                    } else {
+                        releaseMediaRecorder();
+                    }
+                }
+            }
+        });
     }
 
     /** A safe way to get an instance of the Camera object. */
-    public static Camera getCameraInstance(){
+    public static Camera getCameraInstance() {
         Camera c = null;
         try {
             c = Camera.open(0); // attempt to get a Camera instance
         }
         catch (Exception e){
             // Camera is not available (in use or does not exist)
-            Log.e("Error", "Camera not available!!!");
+            Log.e("Error", "Camera not available!");
         }
         return c; // returns null if camera is unavailable
     }
@@ -133,7 +104,13 @@ public class CameraActivity extends Activity {
         releaseCamera();              // release the camera immediately on pause event
     }
 
-    private void releaseMediaRecorder(){
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mGPSTracker.stop();
+    }
+
+    private void releaseMediaRecorder() {
         if (mMediaRecorder != null) {
             mMediaRecorder.reset();   // clear recorder configuration
             mMediaRecorder.release(); // release the recorder object
@@ -142,15 +119,14 @@ public class CameraActivity extends Activity {
         }
     }
 
-    private void releaseCamera(){
-        if (mCamera != null){
+    private void releaseCamera() {
+        if (mCamera != null) {
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
     }
 
-    private boolean prepareVideoRecorder(){
-
+    private boolean prepareVideoRecorder() {
         mCamera = getCameraInstance();
         mMediaRecorder = new MediaRecorder();
 
@@ -166,7 +142,7 @@ public class CameraActivity extends Activity {
         mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
 
         // Step 4: Set output file
-        mMediaRecorder.setOutputFile(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
+        mMediaRecorder.setOutputFile(mSession.getVideoPath());
 
         // Step 5: Set the preview output
         mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
@@ -183,45 +159,7 @@ public class CameraActivity extends Activity {
             releaseMediaRecorder();
             return false;
         }
+
         return true;
-    }
-
-    /** Create a file Uri for saving an image or video */
-    private static Uri getOutputMediaFileUri(int type){
-        return Uri.fromFile(getOutputMediaFile(type));
-    }
-
-    /** Create a File for saving an image or video */
-    private static File getOutputMediaFile(int type){
-        // To be safe, you should check that the SDCard is mounted
-        // using Environment.getExternalStorageState() before doing this.
-
-        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "MyCameraApp");
-        // This location works best if you want the created images to be shared
-        // between applications and persist after your app has been uninstalled.
-
-        // Create the storage directory if it does not exist
-        if (! mediaStorageDir.exists()){
-            if (! mediaStorageDir.mkdirs()){
-                Log.d("MyCameraApp", "failed to create directory");
-                return null;
-            }
-        }
-
-        // Create a media file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        File mediaFile;
-        /*if (type == MEDIA_TYPE_IMAGE){
-            mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-                    "IMG_"+ timeStamp + ".jpg");
-        } else */if(type == MEDIA_TYPE_VIDEO) {
-            mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-                    "VID_"+ timeStamp + ".mp4");
-        } else {
-            return null;
-        }
-
-        return mediaFile;
     }
 }

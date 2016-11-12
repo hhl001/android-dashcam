@@ -4,200 +4,86 @@ package com.example.tianyi.dashcam;
  * Created by huanghaolin on 2016-11-11.
  */
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Service;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 public class GPSTracker extends Service implements LocationListener {
 
     private final Context mContext;
-    private OutputStreamWriter out;
 
-    // flag for GPS status
     boolean isGPSEnabled = false;
-
-    // flag for network status
     boolean isNetworkEnabled = false;
-
-    // flag for GPS status
     boolean canGetLocation = false;
 
-    Location location; // location
-    double latitude; // latitude
-    double longitude; // longitude
-    double speed; //speed
-    String date; //date
-    SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//dd/MM/yyyy
+    Session mSession;
 
-    List<LocationPoint> locationList = new ArrayList<>();
-
-    // The minimum distance to change Updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 100; // 100 meters
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60; // 1 minute
 
-    // The minimum time between updates in milliseconds
-    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
+    private LocationManager locationManager;
 
-    // Declaring a Location Manager
-    protected LocationManager locationManager;
-
-    public GPSTracker(Context context) throws IOException {
+    public GPSTracker(Context context) {
         this.mContext = context;
-        // Open file
-        File[] fs = context.getExternalFilesDirs(null);
-        String extPath = "";
-        // at index 0 you have the internal storage and at index 1 the real external...
-        if (fs != null && fs.length >= 2){
-            extPath = fs[1].getAbsolutePath();
-            Log.e("SD Path",fs[1].getAbsolutePath());
-        }
-
-        String filename = "LocationData.txt";
-        File outputFile = new File(extPath, filename);
-        if (!outputFile.exists())
-            outputFile.createNewFile();
-
-        out = new OutputStreamWriter(new FileOutputStream(outputFile));
-        out.write("Timespam, Latitude, Longitude, Speed");
-        out.write("\n");
-        getLocation();
+        initLocationManager();
     }
 
-    public Location getLocation() {
+    public void initLocationManager() {
         try {
-            locationManager = (LocationManager) mContext
-                    .getSystemService(LOCATION_SERVICE);
-
-            // getting GPS status
-            isGPSEnabled = locationManager
-                    .isProviderEnabled(LocationManager.GPS_PROVIDER);
-
-            // getting network status
-            isNetworkEnabled = locationManager
-                    .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            locationManager = (LocationManager) mContext.getSystemService(LOCATION_SERVICE);
+            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
             if (!isGPSEnabled && !isNetworkEnabled) {
-                // no network provider is enabled
                 this.showSettingsAlert();
             } else {
                 this.canGetLocation = true;
-                // First get location from Network Provider
+                // First get lastLocation from Network Provider
                 if (isNetworkEnabled) {
                     locationManager.requestLocationUpdates(
                             LocationManager.NETWORK_PROVIDER,
                             MIN_TIME_BW_UPDATES,
-                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                    Log.d("Network", "Network");
-                    if (locationManager != null) {
-                        location = locationManager
-                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                        if (location != null) {
-                            latitude = location.getLatitude();
-                            longitude = location.getLongitude();
-                            speed = location.getSpeed();
-                            Date nowdate = new Date();
-                            date = sdfDate.format(nowdate);
-                            LocationPoint lp1 = new LocationPoint(latitude, longitude, speed, date);
-                            locationList.add(lp1);
-                        }
-                    }
+                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this
+                    );
                 }
                 // if GPS Enabled get lat/long using GPS Services
                 else if (isGPSEnabled) {
-                    if (location == null) {
-                        locationManager.requestLocationUpdates(
-                                LocationManager.GPS_PROVIDER,
-                                MIN_TIME_BW_UPDATES,
-                                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                        Log.d("GPS Enabled", "GPS Enabled");
-                        if (locationManager != null) {
-                            location = locationManager
-                                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                            if (location != null) {
-                                latitude = location.getLatitude();
-                                longitude = location.getLongitude();
-                                speed = location.getSpeed();
-                                Date nowdate = new Date();
-                                date = sdfDate.format(nowdate);
-                                LocationPoint lp1 = new LocationPoint(latitude, longitude, speed, date);
-                                locationList.add(lp1);
-                            }
-                        }
-                    }
+                    locationManager.requestLocationUpdates(
+                            LocationManager.GPS_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this
+                    );
                 }
             }
-
-        } catch (Exception e) {
+        } catch (SecurityException e) {
             e.printStackTrace();
         }
-
-        return location;
     }
 
-    /**
-     * Stop using GPS listener
-     * Calling this function will stop using GPS in your app
-     * */
-    public void stopUsingGPS() throws IOException {
+    public void stop() {
+        try {
+            if (locationManager != null) {
+                locationManager.removeUpdates(GPSTracker.this);
+            }
 
-        // write/flush to file and close.
-        for (int i=0; i<locationList.size(); i++){
-            out.write(locationList.get(i).output());
-            out.write("\n");
-        }
-
-        out.close();
-
-        if(locationManager != null){
-            locationManager.removeUpdates(GPSTracker.this);
+            Intent intent = new Intent(mContext, GPSTracker.class);
+            mContext.stopService(intent);
+        } catch (SecurityException e) {
+            e.printStackTrace();
         }
     }
 
-    /**
-     * Function to get latitude
-     * */
-    public double getLatitude(){
-        if(location != null){
-            latitude = location.getLatitude();
-        }
-
-        // return latitude
-        return latitude;
-    }
-
-    /**
-     * Function to get longitude
-     * */
-    public double getLongitude(){
-        if(location != null){
-            longitude = location.getLongitude();
-        }
-
-        // return longitude
-        return longitude;
-    }
 
     /**
      * Function to check GPS/wifi enabled
@@ -211,14 +97,14 @@ public class GPSTracker extends Service implements LocationListener {
      * Function to show settings alert dialog
      * On pressing Settings button will lauch Settings Options
      * */
-    public void showSettingsAlert(){
+    public void showSettingsAlert() {
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(mContext);
 
         // Setting Dialog Title
         alertDialog.setTitle("GPS is not enabled.");
 
         // Setting Dialog Message
-        alertDialog.setMessage("Please go to the settings menu and enable.");
+        alertDialog.setMessage("Please go to the settings menu to enable.");
 
         // On pressing Settings button
         alertDialog.setPositiveButton("Settings", new DialogInterface.OnClickListener() {
@@ -241,8 +127,23 @@ public class GPSTracker extends Service implements LocationListener {
 
     @Override
     public void onLocationChanged(Location location) {
-        // store location to array.
-        Toast.makeText(mContext, "Your Location is - \nLat: " + latitude + "\nLong: " + longitude, Toast.LENGTH_LONG).show();
+        if (mSession != null) {
+            mSession.addLocationData(new LocationData(
+                    location.getLatitude(),
+                    location.getLongitude(),
+                    location.getSpeed(),
+                    Session.DATE_FORMATTER.format(new Date()))
+            );
+        }
+
+        Toast.makeText(
+                mContext,
+                "Your Location is - \nLat: "
+                    + location.getLatitude()
+                    + "\nLong: "
+                    + location.getLongitude(),
+                Toast.LENGTH_LONG
+        ).show();
     }
 
     @Override
@@ -260,6 +161,10 @@ public class GPSTracker extends Service implements LocationListener {
     @Override
     public IBinder onBind(Intent arg0) {
         return null;
+    }
+
+    public void setSession(Session session) {
+        mSession = session;
     }
 
 }

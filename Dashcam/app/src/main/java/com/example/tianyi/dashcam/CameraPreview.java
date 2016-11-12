@@ -7,10 +7,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import java.io.IOException;
-import java.util.logging.FileHandler;
 
 import static android.content.ContentValues.TAG;
-import static com.example.tianyi.dashcam.CameraActivity.getCameraInstance;
 
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private SurfaceHolder mHolder;

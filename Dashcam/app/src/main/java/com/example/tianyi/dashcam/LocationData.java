@@ -4,14 +4,12 @@ package com.example.tianyi.dashcam;
  * Created by Tianyi on 11/11/2016.
  */
 
-public class LocationPoint {
+public class LocationData {
 
     private double lat, lng, speed;
     String timestamp;
 
-    LocationPoint() {}
-
-    LocationPoint(double lat, double lng, double speed, String timestamp) {
+    LocationData(double lat, double lng, double speed, String timestamp) {
         this.lat = lat;
         this.lng = lng;
         this.speed = speed;
@@ -34,7 +32,8 @@ public class LocationPoint {
         return speed;
     }
 
-    public String output() {
-        return timestamp + ", " + lat + ", " + lng + ", " + speed;
+    @Override
+    public String toString() {
+        return timestamp + "," + lat + "," + lng + "," + speed;
     }
 }
