@@ -5,6 +5,7 @@ package com.example.tianyi.dashcam;
  */
 
 public class LocationData {
+    private static final String LOG_TAG = "LocationData";
 
     private double lat, lng, speed;
     String timestamp;

@@ -17,10 +17,12 @@ import android.view.MenuInflater;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String LOG_TAG = "MainActivity";
 
     private final String[] mPermissionsRequired = {
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.ACCESS_FINE_LOCATION
     };
@@ -42,11 +44,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Log.i("MainActivity", "onRequestPermissionsResult");
+        Log.i(LOG_TAG, "onRequestPermissionsResult");
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE:
                 if (grantResults.length == 0) {
-                    Log.i("MainActivity", "grantResults empty");
+                    Log.i(LOG_TAG, "grantResults empty");
                     openCamera(null);
                     return;
                 }
@@ -54,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < grantResults.length; i++) {
                     if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
                         openCamera(null);
-                        Log.i("MainActivity", permissions[i] + " denied");
+                        Log.i(LOG_TAG, permissions[i] + " denied");
                         return;
                     }
                 }
@@ -70,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         String[] permissionsToRequest = getPermissionsToRequest();
 
         for (int i = 0; i < permissionsToRequest.length; i++) {
-            Log.i("MainActivity", permissionsToRequest[i]);
+            Log.i(LOG_TAG, permissionsToRequest[i]);
         }
 
         if (permissionsToRequest.length > 0) {

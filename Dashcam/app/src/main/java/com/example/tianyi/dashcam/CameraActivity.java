@@ -1,14 +1,19 @@
 package com.example.tianyi.dashcam;
 
 import android.app.Activity;
+import android.content.Context;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.SystemClock;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.Chronometer;
 import android.widget.FrameLayout;
 import android.view.View;
 
@@ -20,6 +25,7 @@ import java.util.Date;
 import static android.content.ContentValues.TAG;
 
 public class CameraActivity extends Activity {
+    private static final String LOG_TAG = "CameraActivity";
 
     private Camera mCamera;
     private CameraPreview mPreview;
@@ -27,14 +33,20 @@ public class CameraActivity extends Activity {
     private Boolean mIsRecording = false;
     private GPSTracker mGPSTracker;
     private Session mSession;
+    private FloatingActionButton mCaptureButton;
+    private Chronometer mChronometer;
+    private Context mContext;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        mContext = this;
         mCamera = getCameraInstance();
         mGPSTracker = new GPSTracker(CameraActivity.this);
+
+        mChronometer = (Chronometer) findViewById(R.id.camera_chronometer);
 
         // Create our Preview view and set it as the content of our activity.
         mPreview = new CameraPreview(this, mCamera);
@@ -42,9 +54,8 @@ public class CameraActivity extends Activity {
         preview.addView(mPreview);
 
         // Add a listener to the Capture button
-        final Button captureButton = (Button) findViewById(R.id.button_capture);
-        captureButton.setText("Record");
-        captureButton.setOnClickListener(new View.OnClickListener() {
+        mCaptureButton = (FloatingActionButton) findViewById(R.id.camera_capture);
+        mCaptureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // check if GPS enabled
@@ -54,6 +65,11 @@ public class CameraActivity extends Activity {
 
                 if (mIsRecording) {
                     // stop recording and release camera
+                    mChronometer.stop();
+                    mChronometer.setVisibility(View.GONE);
+
+                    mCaptureButton.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.ic_videocam_white_48dp));
+
                     mMediaRecorder.stop();  // stop the recording
                     releaseMediaRecorder(); // release the MediaRecorder object
                     mCamera.lock();         // take camera access back from MediaRecorder
@@ -61,7 +77,6 @@ public class CameraActivity extends Activity {
                     mGPSTracker.stop();
                     mSession.flushLocationData();
 
-                    captureButton.setText("Record");
                     mIsRecording = false;
                 } else {
                     mSession = new Session();
@@ -71,9 +86,13 @@ public class CameraActivity extends Activity {
                     if (prepareVideoRecorder()) {
                         // Camera is available and unlocked, MediaRecorder is prepared,
                         // now you can start recording
-
+                        mCaptureButton.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.ic_stop_white_48dp));
                         mMediaRecorder.start();
-                        captureButton.setText("Stop");
+
+                        mChronometer.setText("00:00");
+                        mChronometer.setBase(SystemClock.elapsedRealtime());
+                        mChronometer.setVisibility(View.VISIBLE);
+                        mChronometer.start();
 
                         mIsRecording = true;
                     } else {
@@ -85,14 +104,14 @@ public class CameraActivity extends Activity {
     }
 
     /** A safe way to get an instance of the Camera object. */
-    public static Camera getCameraInstance() {
+    public Camera getCameraInstance() {
         Camera c = null;
         try {
             c = Camera.open(0); // attempt to get a Camera instance
         }
         catch (Exception e){
             // Camera is not available (in use or does not exist)
-            Log.e("Error", "Camera not available!");
+            Log.i(LOG_TAG, "Camera not available!");
         }
         return c; // returns null if camera is unavailable
     }
@@ -151,11 +170,11 @@ public class CameraActivity extends Activity {
         try {
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
-            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            Log.i(LOG_TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
             releaseMediaRecorder();
             return false;
         } catch (IOException e) {
-            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+            Log.i(LOG_TAG, "IOException preparing MediaRecorder: " + e.getMessage());
             releaseMediaRecorder();
             return false;
         }

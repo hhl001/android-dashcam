@@ -15,22 +15,24 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.util.Date;
 
 public class GPSTracker extends Service implements LocationListener {
+    private static final String LOG_TAG = "GPSTracker";
 
-    private final Context mContext;
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 100; // 100 meters
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60; // 1 minute
+
+    private Context mContext;
 
     boolean isGPSEnabled = false;
     boolean isNetworkEnabled = false;
     boolean canGetLocation = false;
 
     Session mSession;
-
-    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 100; // 100 meters
-    private static final long MIN_TIME_BW_UPDATES = 1000 * 60; // 1 minute
 
     private LocationManager locationManager;
 
@@ -72,6 +74,7 @@ public class GPSTracker extends Service implements LocationListener {
     }
 
     public void stop() {
+        Log.i(LOG_TAG, "Stopping GPSTracker");
         try {
             if (locationManager != null) {
                 locationManager.removeUpdates(GPSTracker.this);

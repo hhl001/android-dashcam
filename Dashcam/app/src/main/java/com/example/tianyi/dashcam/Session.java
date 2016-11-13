@@ -16,6 +16,8 @@ import java.util.Date;
  */
 
 public class Session {
+    private static final String LOG_TAG = "Session";
+
     private ArrayList<LocationData> mLocationDataList;
     private String mId;
 
@@ -98,7 +100,7 @@ public class Session {
 
         // Create the storage directory if it does not exist
         if (!mediaStorageDir.exists() && !mediaStorageDir.mkdirs()) {
-            Log.d("AndroidDashcam", "failed to create directory");
+            Log.i(LOG_TAG, "failed to create directory");
             return null;
         }
 
