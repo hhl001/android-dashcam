@@ -60,6 +60,21 @@ public class Session {
 
     // Getters.
 
+    public static String getDirectory() {
+        File mediaStorageDir = new File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                "AndroidDashcam"
+        );
+
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists() && !mediaStorageDir.mkdirs()) {
+            Log.i(LOG_TAG, "failed to create directory");
+            return null;
+        }
+
+        return mediaStorageDir.getPath();
+    }
+
     public String getId() {
         return mId;
     }
@@ -89,22 +104,4 @@ public class Session {
     public void addLocationData(LocationData locationData) {
         mLocationDataList.add(locationData);
     }
-
-    // Helper methods.
-
-    private static String getDirectory() {
-        File mediaStorageDir = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "AndroidDashcam"
-        );
-
-        // Create the storage directory if it does not exist
-        if (!mediaStorageDir.exists() && !mediaStorageDir.mkdirs()) {
-            Log.i(LOG_TAG, "failed to create directory");
-            return null;
-        }
-
-        return mediaStorageDir.getPath();
-    }
-
 }
